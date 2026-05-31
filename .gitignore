@@ -2,6 +2,3 @@ node_modules/
 .DS_Store
 *.log
 pnpm-lock.yaml
-
-# Keep the generated presentation PDF, but do not publish source paper PDFs.
-Guo 等 - 2025 - CONSTRAINT-CONDITIONED ACTOR-CRITIC FOR OFFLINE SAFE REINFORCEMENT LEARNING.pdf
