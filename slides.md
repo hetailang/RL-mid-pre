@@ -178,8 +178,6 @@ We also improve classifier training with:
 
 # Expected Benefit and Evaluation
 
-The improvement is small enough for a course project, but directly targets CCAC's safety bottleneck.
-
 | Question | What we will measure |
 |---|---|
 | Does soft weighting reduce threshold brittleness? | Reward-cost trade-off near the safety boundary |
