@@ -1,6 +1,6 @@
 ---
 theme: seriph
-title: Learning Safe Policies from Offline Data under Dynamic Safety Budgets
+title: Robust Offline Safe RL under Dynamic Safety Budgets
 info: RL Mid-term Presentation
 class: text-slate-950
 drawings:
@@ -9,9 +9,9 @@ transition: slide-left
 mdc: true
 ---
 
-# Learning Safe Policies from Offline Data under Dynamic Safety Budgets
+# Robust Offline Safe RL under Dynamic Safety Budgets
 
-## A Constraint-Conditioned Approach to Offline Safe RL
+## From CCAC to Soft & Calibrated OOD Regularization
 
 RL Mid-term Presentation  
 2026.06.03
@@ -34,11 +34,11 @@ RL Mid-term Presentation
 layout: center
 ---
 
-# Background: Why Offline RL?
+# Background: Offline Safe RL
 
-Traditional reinforcement learning usually requires repeated interaction between an agent and the environment.
+Traditional RL learns by repeatedly interacting with the environment.
 
-In many real-world domains, online exploration is expensive, risky, or unacceptable.
+In safety-critical domains, online exploration can be too expensive or risky, so we want to learn from an offline dataset.
 
 <div class="mt-10 grid grid-cols-3 gap-4 text-center">
   <div class="rounded border border-slate-200 p-4">
@@ -57,124 +57,69 @@ In many real-world domains, online exploration is expensive, risky, or unaccepta
 
 ---
 
-# From Offline RL to Offline Safe RL
+# Problem Setup
 
-Offline RL aims to learn a policy only from a fixed dataset, without additional environment interaction.
-
-In safety-critical settings, the policy must also satisfy a cumulative cost constraint:
+Offline Safe RL optimizes reward while constraining cumulative safety cost:
 
 $$
-\max_\pi \ \mathbb{E}_{\pi}\left[\sum_t r_t\right]
+\max_\pi \ \mathbb{E}_{\pi}[R(\tau)]
 \quad
 \text{s.t.}
 \quad
-\mathbb{E}_{\pi}\left[\sum_t c_t\right] \le \epsilon
+\mathbb{E}_{\pi}[C(\tau)] \le \epsilon
 $$
 
-where:
+It must solve three problems at the same time:
 
-- $r_t$: task reward, such as speed, distance, or completion
-- $c_t$: safety cost, such as collision, boundary violation, or overspeeding
-- $\epsilon$: a fixed safety threshold for the total acceptable risk
+1. OOD state-action pairs caused by offline data
+2. A policy that satisfies the cost constraint
+3. A safety budget that may change during deployment
 
----
-layout: two-cols
----
-
-# New Challenges in Offline Safe RL
-
-## 1. Offline distribution shift
-
-The dataset only covers historical behavior. At deployment, the learned policy may visit rare or unsupported state-action pairs, making value estimation unreliable.
-
-::right::
-
-# &nbsp;
-
-## 2. Fixed safety constraints
-
-Many Safe RL methods train for a fixed threshold $\epsilon$.  
-In deployment, the available safety budget may vary across scenarios, tasks, or time steps.
-
-<div class="mt-8 rounded border border-slate-200 p-4 text-sm">
-The core tension: maximize return while avoiding unsafe extrapolation and budget violation.
-</div>
-
----
-layout: center
----
-
-# Our Research Question
-
-Can we learn a policy from offline data that, at deployment time, can:
-
-- Achieve high reward
-- Satisfy safety constraints
-- Adapt to different safety budgets
-- Reduce the risk from OOD states and actions
-
-$$
-\pi_\theta(a_t \mid s_t, \kappa_t)
-$$
-
-<div class="mt-8 text-xl font-semibold">
-In short: the policy should adapt its behavior according to the current remaining safety budget.
+<div class="mt-6 rounded border border-slate-200 p-4">
+Goal: learn a high-reward and safe policy that can adapt to different remaining budgets.
 </div>
 
 ---
 
-# Core Idea: Condition on the Safety Budget
+# CCAC: Existing Backbone
 
-Instead of training a separate policy for each fixed threshold $\epsilon$, we condition the policy on the current remaining budget:
-
-$$
-\pi_\theta(a_t \mid s_t, \kappa_t)
-$$
-
-Here, $\kappa_t$ denotes the remaining safety budget at time step $t$. Given an initial budget $\kappa_1$, it is updated after each step:
+CCAC addresses this setting with a budget-conditioned actor-critic framework.
 
 $$
-\kappa_{t+1} = \kappa_t - c_t
+\pi_\theta(a_t \mid s_t,\kappa_t),
+\qquad
+\kappa_{t+1}=\kappa_t-c_t
 $$
+
+The remaining budget $\kappa_t$ becomes part of the policy input, so the same policy can behave differently under different safety budgets.
 
 $$
 \underbrace{s_t}_{\text{state}}
 \ ,\
-\underbrace{\kappa_t}_{\text{remaining safety budget}}
+\underbrace{\kappa_t}_{\text{remaining budget}}
 \quad \longrightarrow \quad
-\underbrace{\pi_\theta(a_t \mid s_t,\kappa_t)}_{\text{constraint-conditioned actor}}
+\underbrace{\pi_\theta(a_t \mid s_t,\kappa_t)}_{\text{budget-conditioned actor}}
 \quad \longrightarrow \quad
 \underbrace{a_t}_{\text{action}}
 $$
 
-$$
-a_t
-\quad \Longrightarrow \quad
-\begin{cases}
-R = \sum_{t=0}^{T} r_t, & \text{maximize reward return} \\
-C = \sum_{t=0}^{T} c_t \le \epsilon, & \text{satisfy total cost threshold}
-\end{cases}
-$$
-
-Changing the initial budget $\kappa_1$ allows the same policy to trade off reward and cost adaptively.
+Take-away: CCAC turns a fixed-threshold safe RL problem into a dynamic-budget policy learning problem.
 
 ---
 
-# Method: Constraint-Conditioned Actor-Critic
+# CCAC: How Safety Is Enforced
 
-The training pipeline can be summarized in five modules:
+The key mechanism is to identify generated OOD / unsafe state-action pairs and penalize them through the cost critic.
 
 | Module | Role | Notation |
 |---|---|---|
 | Offline data | Build budget-annotated transitions | $D=\{(s_t,a_t,r_t,c_t,s_{t+1},\kappa_t)\}$ |
 | Constraint-conditioned CVAE | Generate state-action pairs under a budget | $(\hat{s},\hat{a})\sim p_\phi(s,a\mid z,\kappa)$ |
-| OOD classifier | Detect whether $(s,a,\kappa)$ is OOD / unsafe | $h_\psi(s,a\mid\kappa)\in[0,1]$ |
-| Cost critic | Overestimate cost values for OOD samples | $Q_c(s,a\mid\kappa)$ |
-| Reward critic + Actor | Maximize reward under safety constraints | $Q_r(s,a\mid\kappa),\ \pi_\theta(a\mid s,\kappa)$ |
+| OOD classifier | Decide whether $(s,a,\kappa)$ is OOD / unsafe | $h_\psi(s,a\mid\kappa)>0.5$ |
+| Cost critic | Overestimate cost for unsafe samples | $Q_c(s,a\mid\kappa)$ |
+| Actor | Maximize reward while avoiding high cost | $\pi_\theta(a\mid s,\kappa)$ |
 
 $$
-D
-\rightarrow
 p_\phi(s,a\mid z,\kappa)
 \rightarrow
 h_\psi(s,a\mid\kappa)
@@ -184,23 +129,82 @@ Q_c(s,a\mid\kappa)
 \pi_\theta(a\mid s,\kappa)
 $$
 
-Take-away: OOD / unsafe samples are assigned high cost, so the actor learns to avoid high-risk actions.
+---
+
+# Our Observation: A Brittle OOD Gate
+
+CCAC relies heavily on the OOD classifier. If classifier decisions are inaccurate, cost overestimation can become unstable.
+
+The original hard OOD rule is:
+
+$$
+\mathbb{I}_{\text{OOD}}(s,a,\kappa)
+=
+\mathbb{I}\left[h_\psi(s,a\mid\kappa)>0.5\right]
+$$
+
+This can cause two issues:
+
+1. Classifier scores may not be calibrated; $0.49$ and $0.51$ are treated completely differently
+2. Under imbalanced data, the classifier may miss truly dangerous OOD samples
+
+<div class="mt-6 rounded border border-slate-200 p-4">
+Question: can we make OOD regularization softer and more calibrated?
+</div>
 
 ---
 
-# Feasibility and Experimental Plan
+# Our Small Improvement
 
-We plan to evaluate the framework on the DSRL benchmark.
+## Soft & Calibrated OOD Regularization
 
-| Dimension | Plan |
+Instead of hard filtering, use a soft OOD weight:
+
+$$
+w_{\text{OOD}}(s,a,\kappa)
+=
+\sigma\left(\alpha\left(h_\psi(s,a\mid\kappa)-\tau\right)\right)
+$$
+
+Then use $w_{\text{OOD}}$ to weight the cost overestimation penalty, rather than making a binary decision.
+
+We also improve classifier training with:
+
+- weighted BCE or focal loss for class imbalance
+- calibration analysis on classifier scores
+- false negative rate analysis for unsafe OOD samples
+
+---
+
+# Expected Benefit and Evaluation
+
+The improvement is small enough for a course project, but directly targets CCAC's safety bottleneck.
+
+| Question | What we will measure |
+|---|---|
+| Does soft weighting reduce threshold brittleness? | Reward-cost trade-off near the safety boundary |
+| Does calibration improve safety detection? | ECE / reliability curve of OOD scores |
+| Does it catch dangerous OOD samples? | OOD false negative rate |
+| Does budget adaptation remain stable? | Performance under different initial budgets $\kappa_1$ |
+
+Expected outcome: similar or better reward, lower constraint violation, and more stable behavior when the OOD classifier is uncertain.
+
+---
+
+# Feasibility
+
+We plan to build on CCAC and evaluate the modification on DSRL-style benchmark tasks.
+
+| Component | Plan |
 |---|---|
 | Environments | Run / Circle / Velocity-style safety control tasks |
-| Metrics | Normalized reward, normalized cost, constraint violation |
-| Baselines | BC-safe, CQL-based Safe RL, Lagrangian Offline RL, sequence modeling methods |
-| Ablations | Remove CVAE, remove OOD classifier, fixed vs. varying safety budgets |
+| Baseline | Original CCAC with hard OOD threshold |
+| Variant | CCAC + soft OOD weight + calibrated classifier loss |
+| Metrics | Reward, cost, constraint violation, OOD FNR, calibration, budget adaptation |
+| Ablations | hard vs. soft OOD, BCE vs. focal loss, fixed vs. varying budgets |
 
 <div class="mt-6 rounded border border-slate-200 p-4">
-Feasibility: the datasets and environments are available; Actor-Critic, CVAE, and classifier modules are standard; by the final presentation, we can first reproduce the main reward-cost trade-off and then add one extension such as dynamic budget switching or sparse safe trajectories.
+The change is localized to classifier training and cost regularization, so it is feasible without redesigning the whole algorithm.
 </div>
 
 ---
@@ -213,7 +217,7 @@ Feasibility: the datasets and environments are available; Actor-Critic, CVAE, an
       <th>Direction</th>
       <th>Methods</th>
       <th>What they address</th>
-      <th>Limitation</th>
+      <th>Remaining gap</th>
     </tr>
   </thead>
   <tbody>
@@ -226,8 +230,8 @@ Feasibility: the datasets and environments are available; Actor-Critic, CVAE, an
     <tr>
       <td>Safe RL</td>
       <td>Lagrangian, CPO, PID-Lagrangian</td>
-      <td>Online constrained optimization</td>
-      <td>Needs interaction; often fixed thresholds</td>
+      <td>Constrained optimization</td>
+      <td>Often needs online interaction</td>
     </tr>
     <tr>
       <td>Offline Safe RL</td>
@@ -236,16 +240,16 @@ Feasibility: the datasets and environments are available; Actor-Critic, CVAE, an
       <td>Hard to adapt to changing budgets</td>
     </tr>
     <tr>
-      <td>Sequence / trajectory</td>
-      <td>CDT, TREBI</td>
-      <td>Condition on reward / cost</td>
-      <td>Limited generalization to unseen budgets</td>
+      <td>Budget-conditioned OSRL</td>
+      <td>CCAC</td>
+      <td>Dynamic budget adaptation + OOD detection</td>
+      <td>Classifier threshold may be brittle</td>
     </tr>
   </tbody>
 </table>
 
 <div class="mt-4 text-xl font-semibold">
-Key gap: adapting behavior under dynamic safety budgets.
+Our angle: make the OOD safety signal softer, calibrated, and easier to evaluate.
 </div>
 
 ---
@@ -260,6 +264,7 @@ Thank you!
 
 # References
 
+- Guo, Z., Zhou, W., Wang, S., & Li, W. Constraint-Conditioned Actor-Critic for Offline Safe Reinforcement Learning. ICLR 2025.
 - Levine, S., Kumar, A., Tucker, G., & Fu, J. Offline Reinforcement Learning: Tutorial, Review, and Perspectives on Open Problems. 2020.
 - Kumar, A., Zhou, A., Tucker, G., & Levine, S. Conservative Q-Learning for Offline Reinforcement Learning. NeurIPS 2020.
 - Liu, Z. et al. Datasets and Benchmarks for Offline Safe Reinforcement Learning. 2023.
