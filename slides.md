@@ -186,10 +186,6 @@ Small-scale experiments on `OfflineBallRun-v0` give a first feasibility signal.
 | Cost critic separation | `focal_soft` matched gap: $8.71$ | OOD samples receive higher cost values than matched IND samples |
 | Full policy, 50k steps | zero realized cost for budgets $1/2/5/10$ | Variant can be integrated into full policy training |
 
-<div class="mt-6 rounded border border-slate-200 p-4">
-Current limitation: this is one task and one seed, so it supports feasibility rather than a final performance claim.
-</div>
-
 ---
 
 # Feasibility Evidence
@@ -219,10 +215,6 @@ The remaining work is to test whether this preliminary signal is robust.
 | Calibration | report ECE and reliability curves; avoid claiming calibration improvement too early |
 | Ablations | hard vs. soft OOD, BCE vs. focal loss, fixed vs. varying budgets |
 | Policy metrics | reward, realized cost, violation rate, OOD FNR, budget adaptation |
-
-<div class="mt-6 rounded border border-slate-200 p-4">
-For the mid-term, the result is enough to show feasibility; the final presentation will focus on robustness.
-</div>
 
 ---
 
