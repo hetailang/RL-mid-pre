@@ -11,7 +11,7 @@ mdc: true
 
 # Robust Offline Safe RL under Dynamic Safety Budgets
 
-## From CCAC to Soft & Calibrated OOD Regularization
+## Toward Soft & Calibrated OOD Regularization
 
 RL Mid-term Presentation  
 2026.06.03
@@ -176,33 +176,52 @@ We also improve classifier training with:
 
 ---
 
-# Expected Benefit and Evaluation
+# Preliminary Validation
 
-| Question | What we will measure |
-|---|---|
-| Does soft weighting reduce threshold brittleness? | Reward-cost trade-off near the safety boundary |
-| Does calibration improve safety detection? | ECE / reliability curve of OOD scores |
-| Does it catch dangerous OOD samples? | OOD false negative rate |
-| Does budget adaptation remain stable? | Performance under different initial budgets $\kappa_1$ |
+Small-scale experiments on `OfflineBallRun-v0` give a first feasibility signal.
 
-Expected outcome: similar or better reward, lower constraint violation, and more stable behavior when the OOD classifier is uncertain.
+| Test | Result | Interpretation |
+|---|---|---|
+| Classifier-only | OOD FNR: $10.4\% \rightarrow 3.6\%$ with focal loss | Fewer dangerous OOD samples are missed |
+| Cost critic separation | `focal_soft` matched gap: $8.71$ | OOD samples receive higher cost values than matched IND samples |
+| Full policy, 50k steps | zero realized cost for budgets $1/2/5/10$ | Variant can be integrated into full policy training |
+
+<div class="mt-6 rounded border border-slate-200 p-4">
+Current limitation: this is one task and one seed, so it supports feasibility rather than a final performance claim.
+</div>
 
 ---
 
-# Feasibility
+# Feasibility Evidence
 
-We plan to build on CCAC and evaluate the modification on DSRL-style benchmark tasks.
+Compared with the 50k original CCAC baseline, `focal_soft` keeps zero realized cost and improves reward.
 
-| Component | Plan |
-|---|---|
-| Environments | Run / Circle / Velocity-style safety control tasks |
-| Baseline | Original CCAC with hard OOD threshold |
-| Variant | CCAC + soft OOD weight + calibrated classifier loss |
-| Metrics | Reward, cost, constraint violation, OOD FNR, calibration, budget adaptation |
-| Ablations | hard vs. soft OOD, BCE vs. focal loss, fixed vs. varying budgets |
+| Target cost | Original CCAC reward / cost | `focal_soft` reward / cost | Reward gain |
+|---|---|---|---|
+| $1$ | $328 / 0$ | $418 / 0$ | $+27.5\%$ |
+| $2$ | $345 / 0$ | $401 / 0$ | $+16.2\%$ |
+| $5$ | $354 / 0$ | $421 / 0$ | $+19.1\%$ |
+| $10$ | $363 / 0$ | $451 / 0$ | $+24.4\%$ |
 
 <div class="mt-6 rounded border border-slate-200 p-4">
-The change is localized to classifier training and cost regularization, so it is feasible without redesigning the whole algorithm.
+Take-away: the modification is small, trainable, and shows a positive reward-cost signal in a preliminary full-policy run.
+</div>
+
+---
+
+# Next Steps for Final Presentation
+
+The remaining work is to test whether this preliminary signal is robust.
+
+| Direction | Plan |
+|---|---|
+| More runs | repeat `focal_soft` on more seeds and at least one additional task |
+| Calibration | report ECE and reliability curves; avoid claiming calibration improvement too early |
+| Ablations | hard vs. soft OOD, BCE vs. focal loss, fixed vs. varying budgets |
+| Policy metrics | reward, realized cost, violation rate, OOD FNR, budget adaptation |
+
+<div class="mt-6 rounded border border-slate-200 p-4">
+For the mid-term, the result is enough to show feasibility; the final presentation will focus on robustness.
 </div>
 
 ---
