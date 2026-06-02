@@ -99,12 +99,29 @@ npm install
 npm run export
 ```
 
+## 导出 PPTX
+
+可以使用 Slidev CLI 将当前幻灯片导出为 PowerPoint 文件：
+
+```bash
+npx slidev export slides.md --format pptx --output slides-export.pptx
+```
+
+导出完成后，会在项目目录生成：
+
+```text
+slides-export.pptx
+```
+
+注意：Slidev 导出的 PPTX 每页主要是图片形式，PowerPoint 中的文字通常不能直接编辑。
+
 ## 项目文件说明
 
 ```text
 .
 ├── slides.md           # 幻灯片源文件
 ├── slides-export.pdf   # 已导出的 PDF
+├── slides-export.pptx  # 已导出的 PPTX
 ├── package.json        # npm 脚本和依赖配置
 ├── package-lock.json   # npm 依赖锁定文件
 └── pnpm-lock.yaml      # pnpm 依赖锁定文件
@@ -121,4 +138,7 @@ npm run dev
 
 # 导出 PDF
 npm run export
+
+# 导出 PPTX
+npx slidev export slides.md --format pptx --output slides-export.pptx
 ```
